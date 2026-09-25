@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-assistant"
+version = "1.0.0"
+description = "J.A.R.V.I.S. — an agentic, voice-first assistant layer for your computer"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",          # HTTP + WebSocket API for the HUD
+    "uvicorn[standard]>=0.29", # ASGI server
+    "httpx>=0.27",             # async HTTP client (LLM, STT/TTS, web research)
+    "pydantic>=2.6",           # typed schemas for events, tools and config
+    "psutil>=5.9",             # real system telemetry and process control
+    "beautifulsoup4>=4.12",    # readable-text extraction for web research
+    "python-multipart>=0.0.9", # audio uploads for speech-to-text
+]
+
+[project.optional-dependencies]
+# Richer desktop control. Everything degrades gracefully when these are absent.
+desktop = [
+    "pillow>=10",        # screenshots (ImageGrab) and image downscaling for vision
+    "pyautogui>=0.9.54", # keyboard / mouse control (opt-in via JARVIS_ALLOW_INPUT_CONTROL)
+    "send2trash>=1.8",   # deletes go to the Recycle Bin instead of being permanent
+    "pypdf>=4",          # read PDF documents
+    "python-docx>=1.1",  # read .docx documents
+]
+windows = [
+    "pycaw>=20240210; sys_platform == 'win32'",  # absolute volume control
+    "comtypes>=1.2; sys_platform == 'win32'",
+]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+jarvis = "jarvis.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["jarvis*"]
+
+[tool.setuptools.package-data]
+jarvis = ["llm/prompts/*.md"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "SIM"]
+ignore = ["E501", "SIM105", "B008", "ASYNC230", "ASYNC240", "SIM112"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true

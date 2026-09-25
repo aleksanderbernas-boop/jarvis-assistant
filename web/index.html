@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="jarvis-token" content="{{JARVIS_TOKEN}}">
+  <title>J.A.R.V.I.S.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/css/hud.css">
+</head>
+<body>
+  <!-- Boot overlay: shows the backend's real initialisation stages -->
+  <div id="boot" class="boot">
+    <div class="boot-inner">
+      <div class="boot-logo">J.A.R.V.I.S.</div>
+      <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+      <ul id="boot-stages" class="boot-stages"></ul>
+      <div id="boot-final" class="boot-final"></div>
+      <button id="boot-engage" class="boot-engage" disabled>CONNECTING…</button>
+      <div class="boot-hint">Engaging enables audio and asks for microphone access.</div>
+    </div>
+  </div>
+
+  <div class="hud" id="hud">
+    <!-- ── Top bar ─────────────────────────────────────────────── -->
+    <header class="topbar">
+      <div class="brand">
+        <canvas id="logo-ring" width="44" height="44"></canvas>
+        <span class="brand-name">J.A.R.V.I.S.</span>
+        <span class="brand-divider"></span>
+        <span class="brand-sub">JUST A RATHER VERY INTELLIGENT SYSTEM</span>
+      </div>
+      <div class="top-status">
+        <span id="conn-status" class="pill"><i class="dot"></i><span>CONNECTING</span></span>
+        <span class="sep"></span>
+        <span id="state-status" class="pill hollow"><i class="dot"></i><span>STANDBY</span></span>
+        <span class="sep"></span>
+        <span id="version">v—</span>
+        <span class="sep"></span>
+        <span id="top-date">—</span>
+        <span id="top-time" class="strong">—</span>
+      </div>
+    </header>
+
+    <!-- ── Left column ─────────────────────────────────────────── -->
+    <section class="left">
+      <div class="panel weather" id="weather-panel">
+        <div class="weather-now">
+          <div id="weather-icon" class="weather-icon"></div>
+          <div>
+            <div id="weather-place" class="label">—</div>
+            <div id="weather-temp" class="big">—</div>
+            <div id="weather-cond" class="muted">Loading weather…</div>
+          </div>
+        </div>
+        <ul id="weather-days" class="weather-days"></ul>
+      </div>
+
+
+      <div class="panel sysstat">
+        <div class="panel-title">SYSTEM STATUS</div>
+        <div class="bar-row"><span>CPU</span><div class="bar"><i id="bar-cpu"></i></div><em id="val-cpu">—</em></div>
+        <div class="bar-row"><span>GPU</span><div class="bar"><i id="bar-gpu"></i></div><em id="val-gpu">—</em></div>
+        <div class="bar-row"><span>RAM</span><div class="bar"><i id="bar-ram"></i></div><em id="val-ram">—</em></div>
+        <div class="bar-row"><span>STORAGE</span><div class="bar"><i id="bar-disk"></i></div><em id="val-disk">—</em></div>
+      </div>
+
+      <div class="panel map">
+        <div class="panel-title">GLOBAL MAP</div>
+        <div class="globe-box"><canvas id="globe"></canvas></div>
+        <div class="map-label">
+          <div id="map-place" class="label">—</div>
+          <div id="map-coords" class="muted small">—</div>
+        </div>
+        <div id="map-lock" class="lock"><i class="dot"></i><span>LOCATING</span></div>
+      </div>
+
+      <div class="panel core">
+        <canvas id="reactor" width="200" height="160"></canvas>
+        <div class="core-info">
+          <div class="label" id="core-title">CORE —</div>
+          <div class="core-row"><span>LLM LATENCY</span><em id="core-latency">—</em></div>
+          <div class="core-row"><span>ACTIVE TASKS</span><em id="core-tasks">0</em></div>
+          <div class="core-row"><span>UPTIME</span><em id="core-uptime">—</em></div>
+          <div class="core-row"><span>MEMORIES</span><em id="core-memories">—</em></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Center ──────────────────────────────────────────────── -->
+    <section class="center">
+      <div class="floor"></div>
+      <nav class="panel nav" id="nav">
+        <div class="crumb">J.A.R.V.I.S. &gt; <span id="crumb-view">MAIN</span></div>
+        <button class="nav-item active" data-view="home">HOME <span>›</span></button>
+        <button class="nav-item" data-view="systems">SYSTEMS <span>›</span></button>
+        <button class="nav-item" data-view="files">FILES <span>›</span></button>
+        <button class="nav-item" data-view="internet">INTERNET <span>›</span></button>
+        <button class="nav-item" data-view="media">MEDIA <span>›</span></button>
+        <button class="nav-item" data-view="settings">SETTINGS <span>›</span></button>
+      </nav>
+      <div class="orb-wrap">
+        <canvas id="orb"></canvas>
+        <div class="orb-title">J.A.R.V.I.S.</div>
+      </div>
+      <div id="captions" class="captions" aria-live="polite">
+        <div id="caption-user" class="caption-user"></div>
+        <div id="caption-jarvis" class="caption-jarvis"></div>
+        <div id="caption-more" class="caption-more"></div>
+      </div>
+      <div class="console">
+        <canvas id="wave" class="wave"></canvas>
+        <div class="state-line">[ <span id="state-label">J.A.R.V.I.S. ONLINE</span> ]</div>
+        <form id="command-form" class="command" autocomplete="off">
+          <button type="button" id="mic-btn" class="icon-btn" title="Microphone (M)"></button>
+          <input id="command-input" type="text" placeholder="Type a command or say “Hey JARVIS”…" maxlength="4000">
+          <button type="button" id="voice-btn" class="icon-btn" title="Voice output"></button>
+          <button type="button" id="log-btn" class="icon-btn" title="Conversation log"></button>
+        </form>
+      </div>
+      <!-- Detail views opened from the nav -->
+      <div id="view" class="view hidden">
+        <div class="view-head"><span id="view-title">—</span><button id="view-close" class="icon-btn">✕</button></div>
+        <div id="view-body" class="view-body"></div>
+      </div>
+    </section>
+
+    <!-- ── Right column ────────────────────────────────────────── -->
+    <section class="right">
+      <div class="panel voice">
+        <div class="voice-head">
+          <div id="voice-mic" class="mic-ring"></div>
+          <div>
+            <div class="panel-title">VOICE COMMANDS</div>
+            <div class="voice-status"><span id="voice-status">Microphone off</span><canvas id="voice-wave" width="120" height="26"></canvas></div>
+          </div>
+        </div>
+        <ul id="voice-hints" class="hints">
+          <li data-cmd="Open files">“Open files”</li>
+          <li data-cmd="Show me the weather">“Show me the weather”</li>
+          <li data-cmd="Check system status">“Check system status”</li>
+          <li data-cmd="What's using most of my memory?">“What's using most of my memory?”</li>
+          <li data-cmd="What are you working on?">“What are you working on?”</li>
+        </ul>
+      </div>
+
+      <div class="clock">
+        <canvas id="clock-ring"></canvas>
+        <div class="clock-text">
+          <div id="clock-time" class="clock-time">--:--</div>
+          <div id="clock-date" class="clock-date">—</div>
+        </div>
+      </div>
+
+      <div class="panel quick">
+        <div class="panel-title">QUICK ACCESS</div>
+        <div class="quick-grid" id="quick-grid"></div>
+      </div>
+
+      <div class="panel activity">
+        <div class="panel-title">RECENT ACTIVITY</div>
+        <ul id="activity" class="activity-list"></ul>
+      </div>
+
+      <div class="panel tasks" id="tasks-panel">
+        <div id="tasks-empty" class="quote">
+          “The best way to predict the future is to create it.”
+          <span>— J.A.R.V.I.S.</span>
+        </div>
+        <div id="tasks-list" class="tasks-list hidden"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Confirmation gate for risky actions -->
+  <div id="confirm" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-title"><i class="dot warn"></i> CONFIRMATION REQUIRED <span id="confirm-risk" class="risk"></span></div>
+      <div id="confirm-summary" class="modal-summary"></div>
+      <ul id="confirm-details" class="modal-details"></ul>
+      <div class="modal-actions">
+        <button id="confirm-no" class="btn">DECLINE</button>
+        <button id="confirm-yes" class="btn primary">PROCEED</button>
+      </div>
+      <div class="muted small">Say “yes” or “no”. No answer within <span id="confirm-countdown">—</span>s counts as no.</div>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>
