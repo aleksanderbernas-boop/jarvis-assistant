@@ -195,6 +195,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         try:
             audio, mime = await services_.tts.synthesize(body.text)
         except SpeechError as exc:
+            log.warning("text-to-speech failed: %s", exc)  # surfaces in the console and SYSTEMS → recent errors
             raise HTTPException(502, str(exc)) from exc
         services_.metrics.record("tts", clock.ms)
         return Response(audio, media_type=mime, headers={"Cache-Control": "no-store"})
