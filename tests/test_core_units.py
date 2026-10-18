@@ -221,3 +221,19 @@ def test_logging_never_writes_secrets(tmp_path: Path) -> None:
         handler.flush()
     content = (tmp_path / "jarvis.log").read_text()
     assert "super-secret-token-123" not in content and "gsk_ZZZ" not in content
+
+
+def test_misconfigured_server_voice_falls_back_to_browser(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import SecretStr
+
+    from jarvis.voice.speech import TextToSpeech
+
+    for key in ("ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID", "JARVIS_MODE"):
+        monkeypatch.delenv(key, raising=False)
+    settings = load_settings(env_file=tmp_path / "none.env")
+    settings.voice.tts_provider = "elevenlabs"
+    tts = TextToSpeech(settings)
+    assert not tts.status()[0] and not tts.server_side  # no key/voice → HUD speaks with the browser voice
+    settings.voice.elevenlabs_api_key = SecretStr("xi-test-key")
+    settings.voice.elevenlabs_voice_id = "voice123"
+    assert TextToSpeech(settings).server_side

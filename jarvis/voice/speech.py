@@ -96,7 +96,9 @@ class TextToSpeech:
 
     @property
     def server_side(self) -> bool:
-        return self.provider in {"groq", "elevenlabs", "openai"} and not self._settings.mock
+        # Only route speech through the server when the provider is fully configured;
+        # otherwise the HUD uses the browser voice instead of going silent.
+        return self.provider in {"groq", "elevenlabs", "openai"} and not self._settings.mock and self.status()[0]
 
     def status(self) -> tuple[bool, str]:
         voice = self._settings.voice

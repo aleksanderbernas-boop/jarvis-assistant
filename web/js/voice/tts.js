@@ -7,9 +7,10 @@ const VOICE_KEY = "jarvis.voice";
 const PREFERRED = [/daniel/i, /george/i, /ryan/i, /uk english male/i, /arthur/i, /oliver/i, /en-gb/i];
 
 export class Speaker {
-  constructor({ onPlaying, onLevel }) {
+  constructor({ onPlaying, onLevel, onError }) {
     this.onPlaying = onPlaying;
     this.onLevel = onLevel;
+    this.onError = onError;
     this.mode = "browser";
     this.enabled = true;
     this.queue = [];
@@ -81,7 +82,10 @@ export class Speaker {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
-    if (!res.ok) throw new Error(`TTS failed (${res.status})`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `voice service returned HTTP ${res.status}`);
+    }
     return URL.createObjectURL(await res.blob());
   }
 
@@ -95,6 +99,11 @@ export class Speaker {
       else await this._playBrowser(item);
     } catch (err) {
       console.warn("speech failed", err);
+      if (this.mode === "server" && this.current === item) {
+        // Server voice unavailable (bad key, quota, network): say it with the browser voice instead.
+        this.onError?.(err.message);
+        await this._playBrowser(item).catch(() => {});
+      }
     }
     if (this.current === item) this._next();
   }

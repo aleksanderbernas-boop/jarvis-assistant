@@ -55,6 +55,14 @@ const speaker = new Speaker({
     mic.guarded = playing;
     link.send({ type: "tts_state", playing, first_audio_ms: firstAudioMs ?? null });
   },
+  onError: (() => {
+    let warned = false;  // one warning per page load, not one per sentence
+    return (message) => {
+      if (warned) return;
+      warned = true;
+      toast("Voice output", `Server voice failed (${message}). Using the browser voice instead — see SYSTEMS.`, "warning", 10000);
+    };
+  })(),
   onLevel: (level) => {
     if (!speaker.playing) return;
     orb.setLevel(level);
