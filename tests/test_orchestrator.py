@@ -73,6 +73,7 @@ async def test_relevant_memory_reaches_the_prompt(scripted) -> None:  # type: ig
     await h.say("open my usual code editor and my project")
     system_prompt = h.services.llm.calls[0]["messages"][0]["content"]
     assert "VS Code" in system_prompt and "Relevant memories" in system_prompt
+    assert "Your voice: replies are spoken by the HUD" in system_prompt  # knows its real voice setup
 
 
 async def test_malformed_tool_arguments_are_reported_to_the_model(scripted) -> None:  # type: ignore[no-untyped-def]

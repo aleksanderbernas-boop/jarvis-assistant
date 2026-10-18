@@ -58,6 +58,16 @@ class ContextBuilder:
         ]
         if settings.user.location_name:
             system_context.append(f"User's location: {settings.user.location_name}")
+        # Your own voice pipeline, so questions like "why can't I hear you?" get facts, not guesses.
+        tts_ok, tts_detail = services.tts.status()
+        stt_ok, stt_detail = services.stt.status()
+        system_context.append(
+            f"Your voice: replies are spoken by the HUD via {tts_detail}"
+            f"{'' if tts_ok else ' (MISCONFIGURED — the HUD falls back to the browser voice)'}; spoken replies are "
+            f"{'ON' if session.voice_output else 'OFF'} for this user; speech recognition: {stt_detail}. "
+            "If the user can't hear you, the cause is on their side (browser audio, volume, voice provider "
+            "errors) — suggest 'diagnostics' and checking the HUD's speaker button; don't claim you have no voice."
+        )
         window = await self._active_window_title()
         if window:
             system_context.append(f"Active window: {window}")
