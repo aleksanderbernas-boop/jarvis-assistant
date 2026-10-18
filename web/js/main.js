@@ -144,8 +144,17 @@ function micFailed(message) {
   link.send({ type: "client_settings", mic_active: false, mic_error: message });
 }
 
+const MIC_ERRORS = {
+  NotAllowedError: "Microphone permission was denied. Click the padlock in the address bar → Microphone → Allow.",
+  NotFoundError: "No microphone found. Check Windows Settings → System → Sound → Input.",
+  NotReadableError: "Windows won't give the browser the microphone. Another app may be using it, or "
+    + "Settings → Privacy & security → Microphone is blocking desktop apps.",
+  OverconstrainedError: "The selected microphone isn't available any more.",
+};
+
 async function toggleMic(force) {
   const want = force ?? !app.micActive;
+  app.micWanted = want;
   if (!want) {
     mic.stop();
     recognizer.stop();
@@ -159,13 +168,27 @@ async function toggleMic(force) {
       if (app.config.stt_provider === "none") toast("Voice input disabled", "JARVIS_STT_PROVIDER is set to none.", "warning");
       app.micActive = true;
     } catch (err) {
-      micFailed(err.name === "NotAllowedError" ? "Microphone permission was denied." : `Microphone unavailable: ${err.message}`);
+      micFailed(MIC_ERRORS[err.name] || `Microphone unavailable: ${err.message}`);
       return;
     }
   }
   updateMicUi();
   link.send({ type: "client_settings", mic_active: app.micActive, mic_error: "" });
 }
+
+// Headphones plugged in, Bluetooth connected, default device changed: the open stream is cut off or
+// stays on the old device. Reconnect to the current default whenever the device list changes.
+let micReconnect = null;
+navigator.mediaDevices?.addEventListener("devicechange", () => {
+  if (!app.micWanted) return;
+  clearTimeout(micReconnect);
+  micReconnect = setTimeout(async () => {
+    mic.stop();
+    recognizer.stop();
+    await toggleMic(true);
+    if (app.micActive) toast("Microphone", "Audio devices changed — microphone reconnected.", "info", 4000);
+  }, 1200);
+});
 
 function toggleVoice() {
   speaker.enabled = !speaker.enabled;
