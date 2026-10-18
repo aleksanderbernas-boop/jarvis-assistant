@@ -144,8 +144,12 @@ export class Views {
       <div class="row-actions">
         <button class="btn" data-action="mic">MICROPHONE: ${this.app.micOn() ? "ON" : "OFF"}</button>
         <button class="btn" data-action="voice">SPOKEN REPLIES: ${this.app.speaker.enabled ? "ON" : "OFF"}</button>
+        <button class="btn primary" data-action="test-voice">TEST VOICE</button>
+        <button class="btn" data-action="barge">INTERRUPT BY TALKING: ${this.app.bargeInOn() ? "ON" : "OFF"}</button>
       </div>
       <p>Voice: ${voiceSelect}</p>
+      <p class="muted small">Using speakers rather than headphones? If JARVIS keeps cutting himself off, turn
+        "Interrupt by talking" off. You can still say or type "stop".</p>
       <p class="muted">Speech recognition: ${esc(cfg.stt_provider)} · Wake words: ${esc((cfg.wake_words || []).join(", "))}
         ${cfg.require_wake_word ? `(required; follow-ups within ${cfg.conversation_window_s}s don't need it)` : "(optional)"}</p>
       <h3>PERMISSIONS</h3>
@@ -184,6 +188,8 @@ export class Views {
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "mic") { await this.app.toggleMic(); this.refresh(); }
     if (action === "voice") { this.app.toggleVoice(); this.refresh(); }
+    if (action === "test-voice") await this.app.testVoice();
+    if (action === "barge") { this.app.setBargeIn(!this.app.bargeInOn()); this.refresh(); }
   }
 
   _onChange(e) {

@@ -53,6 +53,32 @@ export class Speaker {
       || voices.find((v) => v.lang?.startsWith("en")) || null;
   }
 
+  /** Speak a phrase through the configured path and report what actually happened. */
+  async test(text) {
+    const item = { response_id: `test-${Date.now()}`, seq: 1, text };
+    if (this.mode === "server") {
+      try {
+        item.audio = this._fetch(text);
+        this.current = item;
+        await this._playServer(item);
+        return this.playing || this.firstAudioReported.has(item.response_id)
+          ? { ok: true, via: "the server voice (ElevenLabs/OpenAI/Groq)" }
+          : { ok: false, error: "the server voice downloaded but the browser refused to play it — click ENGAGE again" };
+      } catch (err) {
+        await this._playBrowser(item).catch(() => {});
+        return { ok: false, error: `server voice failed (${err.message}); tried the browser voice instead` };
+      } finally {
+        this.current = null;
+        this._setPlaying(false);
+      }
+    }
+    if (!("speechSynthesis" in window)) return { ok: false, error: "this browser has no speech synthesis" };
+    if (!this.voices().length) return { ok: false, error: "the browser has no voices installed — try Edge" };
+    await this._playBrowser(item);
+    this._setPlaying(false);
+    return { ok: true, via: `the browser voice "${this.voice?.name ?? "default"}"` };
+  }
+
   markResponseStart(responseId) { this.responseStarts.set(responseId, performance.now()); }
 
   enqueue(event) {

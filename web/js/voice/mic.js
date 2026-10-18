@@ -6,6 +6,7 @@ const PREROLL_MS = 350;
 const END_SILENCE_MS = 750;
 const MIN_SPEECH_MS = 280;
 const MAX_UTTERANCE_MS = 25000;
+const ECHO_LEARN_MS = 700;
 
 const WORKLET = `
 class JarvisCapture extends AudioWorkletProcessor {
@@ -21,8 +22,23 @@ export class Microphone {
   constructor({ onLevel, onSpeechStart, onUtterance, onError }) {
     Object.assign(this, { onLevel, onSpeechStart, onUtterance, onError });
     this.active = false;
-    this.guarded = false; // true while JARVIS is speaking → stricter detection (echo)
+    this._guarded = false;
     this.captureUtterances = true;
+    this.allowBargeIn = true; // talking over JARVIS interrupts him
+    this.echoLevel = 0;
+  }
+
+  // True while JARVIS is speaking. His own voice reaches the mic (especially through speakers, and
+  // the browser's built-in voice bypasses echo cancellation), so during playback we first learn how
+  // loud that echo is and only treat clearly louder speech as the user barging in.
+  get guarded() { return this._guarded; }
+  set guarded(value) {
+    if (value && !this._guarded) {
+      this.guardSince = performance.now();
+      this.echoLevel = 0;
+      this.onset = 0;
+    }
+    this._guarded = value;
   }
 
   async start() {
@@ -79,9 +95,20 @@ export class Microphone {
     const rms = Math.sqrt(sum / frame.length);
     this.onLevel?.(Math.min(1, rms * 12));
 
-    const threshold = this.guarded ? Math.max(this.floor * 6, 0.045) : Math.max(this.floor * 3, 0.014);
-    const onsetFrames = this.guarded ? 12 : 4; // guarded: ~240 ms of clear speech before barging in
+    if (this.guarded && !this.speech) {
+      const learning = performance.now() - this.guardSince < ECHO_LEARN_MS;
+      if (learning || !this.allowBargeIn) {
+        // Measure JARVIS's echo; never barge in on it.
+        this.echoLevel = Math.max(this.echoLevel * 0.95, rms);
+        this.onset = 0;
+        return;
+      }
+    }
+    const echoBar = this.echoLevel * 2.5;
+    const threshold = this.guarded ? Math.max(this.floor * 6, 0.045, echoBar) : Math.max(this.floor * 3, 0.014);
+    const onsetFrames = this.guarded ? 15 : 4; // guarded: ~300 ms of clearly louder speech before barging in
     const loud = rms > threshold;
+    if (this.guarded && !loud) this.echoLevel = this.echoLevel * 0.98 + rms * 0.02;
 
     if (!this.speech) {
       this.preroll.push(frame);

@@ -1,6 +1,6 @@
 // J.A.R.V.I.S. HUD — wires backend events to the interface, and the microphone/speaker to the backend.
 
-import { Link, api } from "./ws.js";
+import { Link, api, storage } from "./ws.js";
 import { icons } from "./icons.js";
 import { Orb } from "./hud/orb.js";
 import { Globe } from "./hud/globe.js";
@@ -76,8 +76,14 @@ const mic = new Microphone({
     if (!speaker.playing) { wave.push(level); orb.setLevel(level * 0.6); }
   },
   onSpeechStart: () => {
-    if (speaker.playing) bargeIn("barge_in");
-    setVoiceStatus("Hearing you…");
+    if (speaker.playing) {
+      bargeIn("barge_in");
+      feed.add("Speech interrupted by voice from the microphone", "state");
+      setVoiceStatus("Interrupted — heard you talking");
+      console.info("[jarvis] barge-in: microphone speech interrupted playback");
+    } else {
+      setVoiceStatus("Hearing you…");
+    }
   },
   onUtterance: (wav) => transcribe(wav),
   onError: (message) => micFailed(message),
@@ -89,6 +95,21 @@ const recognizer = new BrowserRecognizer({
   onInterim: (text) => captions.interim(text),
   onError: (message) => micFailed(`Speech recognition: ${message}`),
 });
+
+mic.allowBargeIn = storage.get("jarvis.bargeIn") !== "off";
+
+function setBargeIn(on) {
+  mic.allowBargeIn = on;
+  storage.set("jarvis.bargeIn", on ? "on" : "off");
+}
+
+async function testVoice() {
+  speaker.unlock();
+  if (!speaker.enabled) toggleVoice();
+  const result = await speaker.test("Testing. This is JARVIS. If you can hear me, the voice works.");
+  if (result.ok) toast("Voice test", `Played via ${result.via}. If you heard nothing, check the speakers and Windows volume.`, "success", 9000);
+  else toast("Voice test failed", result.error, "error", 12000);
+}
 
 function bargeIn(reason) {
   speaker.stop();
@@ -203,6 +224,7 @@ $("quick-grid").addEventListener("click", (e) => {
 const views = new Views({
   send, get config() { return app.config; }, get log() { return app.log; }, get fileEvents() { return app.fileEvents; },
   speaker, toggleMic, toggleVoice, micOn: () => app.micActive,
+  testVoice, setBargeIn, bargeInOn: () => mic.allowBargeIn,
 });
 
 // ── State display ───────────────────────────────────────────────────────
